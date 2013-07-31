@@ -36,7 +36,7 @@ if {$::PLATFORM == $::PLATFORM_WIN} {
 	grid config [ttk::label $mainframe.sep ] -row  6 -column 0 -columnspan 5
 
 	set info_fileVersion_l [ttk::label $mainframe.infoVersion_l -text "File Version:"]
-	set info_fileVersion   [ttk::spinbox $mainframe.infoVersion -width 15]
+	set info_fileVersion   [spinbox $mainframe.infoVersion -width 15]
 	
 	grid config $info_fileVersion_l		-row  7 -column 0 -sticky e -ipadx 10
 	grid config $info_fileVersion		-row  7 -column 1 -sticky w -columnspan 3
@@ -48,7 +48,7 @@ if {$::PLATFORM == $::PLATFORM_WIN} {
 	grid config $info_fileDesc			-row  8 -column 1 -sticky w -columnspan 3
 	
 	set info_prodVersion_l [ttk::label $mainframe.prodVersion_l -text "Product Version:"]
-	set info_prodVersion   [ttk::spinbox $mainframe.prodVersion -width 15]
+	set info_prodVersion   [spinbox $mainframe.prodVersion -width 15]
 	
 	grid config $info_prodVersion_l		-row  9 -column 0 -sticky e -ipadx 10
 	grid config $info_prodVersion		-row  9 -column 1 -sticky w -columnspan 3
@@ -108,6 +108,7 @@ grid config $build						-row 25 -column 4 -sticky e -pady 10
 
 pack $mainframe -padx 20 -pady 15
 wm resizable . 0 0
+wm title . "tclkitty [info patchlevel]"
 
 
 
@@ -116,7 +117,7 @@ proc browseDialog {openOrSaveOrFolder widget extension multifile} {
 	global extraFiles
 	global extraFilesList
 	
-	set types_ [list {Tcl Scripts} .$extension]
+	set types_ [list {Tcl Scripts} $extension]
 	set types [list $types_]
 
 	if {$openOrSaveOrFolder == "FOLDER"} {

@@ -26,7 +26,6 @@ if [info exists starkit::topdir] {
 
 
 # TODO: Spinners for 0.0.0.0
-# TODO: Resource Files/Folders
 
 
 package require Tk
@@ -43,9 +42,9 @@ variable PATH_ResHacker
 variable PATH_gorc
 
 if {$::PLATFORM == $::PLATFORM_WIN} {
-	set ExeExtension exe
-	set KitExtension kit
-	set IconExtension ico
+	set ExeExtension .exe
+	set KitExtension .kit
+	set IconExtension .ico
 	
 	set PATH_tclkit "tclkit-win32.upx.exe"
 	set PATH_sdx "sdx-20110317.kit"
