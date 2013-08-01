@@ -17,9 +17,6 @@ switch $tcl_platform(platform) {
 }
 
 
-# TODO: Spinners for 0.0.0.0
-
-
 package require Tk
 
 
@@ -58,6 +55,10 @@ set lastBrowseDir .
 
 variable extraFilesList
 set extraFilesList [list]
+variable pkgFilesList
+set pkgFilesList [list]
 
 variable cleanupList
 set cleanupList [list]
+
+variable statusVariable

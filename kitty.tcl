@@ -8,7 +8,21 @@ if [info exists starkit::topdir] {
 source $APP_DIR/header.tcl
 source $APP_DIR/gui.tcl
 
+# Download tclkit:
+#	http://www.patthoyts.tk/tclkit
+#	http://www.openverse.com/~lilith/TCL/
+#	http://equi4.com/pub/tk/
+# SDX commands:
+#	http://wiki.tcl.tk/3411
+# Building tclkit:
+#	http://code.google.com/p/tclkit/issues/detail?id=11
+#	http://code.google.com/p/tclkit/wiki/BuildingTclkit
 
+# TODO:
+#		x86 vs x64 RadioButton
+#		sdx options for final wrapping
+#			-nocomp		Do not compress files added to starkit
+#			-writable	Allow modifications (must be single writer)
 
 proc build {} {
 	global APP_DIR
@@ -21,6 +35,7 @@ proc build {} {
 	global iconfile
 	
 	global extraFilesList
+	global pkgFilesList
 	global cleanupList
 	global ExeExtension
 	
@@ -83,78 +98,157 @@ proc build {} {
 	}
 
 
+	showStatus
+	update idletasks
+
 	#### Clean ####
+	set statusVariable "Cleaning up any leftovers from last time..."
 	file delete -force -- $vfsfolder
 	file delete -force -- $kitfile
 	file delete -force -- $outputexe
 	file delete -force -- $tempfolder
 	
 	################### Create .kit ###################
-	puts "create"
+	set statusVariable "Creating starkit file:		$kitfile"
 	exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" qwrap "$Vmainfile"
-	puts "create2"
-	#if {![waitForFile $kitfile]} {
-		#cleanup "ERROR: kitfile"
-		#kill $pid
-		#return
-	#}
-	#kill $pid
+	if {![file exists $kitfile]} {
+		cleanup "Error" "kitfile"
+		return
+	}
 	lappend cleanupList $kitfile
 	
 	################### Unwrap .kit ###################
-	set pid [exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" unwrap "$kitfile"]
-	#if {![waitForFile $vfsfolder]} {
-		#cleanup "ERROR: unwrap"
-		#kill $pid
-		#return
-	#}
-	#kill $pid
+	set statusVariable "Unwrapping starkit file:	$vfsfolder"
+	exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" unwrap "$kitfile"
+	if {![file exists $vfsfolder]} {
+		cleanup "Error" "vfs folder"
+		return
+	}
 	lappend cleanupList $vfsfolder
 
-	################### Copy extra files into $filenameMinusExtension.vfs ###################
-
+	################### Copy extra files ###################
 	foreach f $extraFilesList {
-		#set newfile "$vfsfolder/lib/app-$filenameMinusExtension/[getFilename $f]"
+		set statusVariable "Copying file:	$f"
 		set newfile "$vfsfolder/[getFilename $f]"
 		file copy $f $newfile
 		if {![file exists $newfile]} {
-			cleanup "ERROR: xtra files:   $f"
+			cleanup "Error" "xtra files:   $f"
+			return
+		}
+	}
+	
+	################### Copy packages ###################
+	foreach f $pkgFilesList {
+		set statusVariable "Copying package:	$f"
+		set newfile "$vfsfolder/lib/[getFilename $f]"
+		file copy $f $newfile
+		if {![file exists $newfile]} {
+			cleanup "Error" "xtra files:   $f"
 			return
 		}
 	}
 
 	################### Re-wrap ###################
+	set statusVariable "Final re-wrapping:		$outputexe"
+	exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" wrap "$outputexe" "-runtime" "$APP_DIR/resources/$PATH_tclkit"
+	if {![file exists $outputexe]} {
+		cleanup "Error" "final exe"
+		return
+	}
+	
+	if {$::PLATFORM == $::PLATFORM_WIN} {
+		windowsIconAndInfo $Viconfile $filenameMinusExtension
+	}
+	cleanup "Info" "Successfully generated:\n$outputexe"
+}
 
-	# Create copy of tclkit executable
-	#set tclCopy "$tempfolder/$PATH_tclkit"
-	#file mkdir $tempfolder
-	#file copy -force -- "$APP_DIR/resources/$PATH_tclkit" "$tclCopy"
-	#lappend cleanupList "$tempfolder"
-	#if {![file exists $tclCopy]} {
-		#cleanup "ERROR: tempdir  $tclCopy"
-		#return
-	#}
+proc cleanup {reasonType reasonMsg} {
+	global cleanupList
+	set statusVariable "Cleaning up..."
+	foreach f $cleanupList {
+		puts "file delete -force -- $f"
+	}
+	wm withdraw .statusDialog 
+	tk_messageBox -icon [string tolower $reasonType] -message $reasonMsg -title $reasonType
+}
+
+proc windowsIconAndInfo {iconFile filenameMinusExtension} {
+	global info_fileVersion
+	global info_fileDesc
+	global info_prodVersion
+	global info_prodName
+	global info_origName
+	global info_company
+	global info_copyright
+	global cleanupList
 	
-	set pid [exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" wrap "$outputexe" "-runtime" "$APP_DIR/resources/$PATH_tclkit"]
-	#if {![waitForFile $outputexe]} {
-		#cleanup "ERROR: re-wrap"
-		#kill $pid
-		#return
-	#}
-	# Wait a second
-	#set derp 0
-	#after 1000 { set derp 1}
-	#vwait derp
+	global PATH_ResHacker
+	global PATH_gorc
+	global PATH_upx
+	global ExeExtension
+	global APP_DIR
 	
-	#while {[file exists $outputexe.tmp]} {
-	#	puts "$outputexe.tmp"
-	#}
-	#kill $pid
-	#while {[file exists $tclCopy] && [catch {[file delete -force -- $tclCopy]}]} {
-	#	puts "Waiting... $pid    $tclCopy"
-	#}
+	# Uncompress with UPX
+	set statusVariable "Uncompressing with UPX"
+	exec $APP_DIR/resources/$PATH_upx "-d" $filenameMinusExtension$ExeExtension
 	
-	cleanup "SUCCESS!    $outputexe"
+	# ResHacker to remove version & icons
+	set statusVariable "Removing information & icons with ResHacker"
+	exec $APP_DIR/resources/$PATH_ResHacker "-delete" "$filenameMinusExtension$ExeExtension" "," "$filenameMinusExtension$ExeExtension" "," "versioninfo" "," ","
+	exec $APP_DIR/resources/$PATH_ResHacker "-delete" "$filenameMinusExtension$ExeExtension" "," "$filenameMinusExtension$ExeExtension" "," "icongroup" "," ","
+	
+	set statusVariable "Creating RC file"
+	set fileId [open "tclkitty.rc" "w"]
+	if {[string length $iconFile] > 0} {
+		set iconFile [string map {"/" "\\"} $iconFile]
+		puts $fileId "APPICONS ICON \"$iconFile\""
+		puts $fileId "TK ICON \"$iconFile\""
+	}
+	puts $fileId 		"1 VERSIONINFO"
+	puts $fileId 		"FILEVERSION [$info_fileVersion(1) get], [$info_fileVersion(2) get], [$info_fileVersion(3) get], [$info_fileVersion(4) get]"
+	puts $fileId 		"PRODUCTVERSION [$info_fileVersion(1) get], [$info_fileVersion(2) get], [$info_fileVersion(3) get], [$info_fileVersion(4) get]"
+	puts $fileId 		"FILEOS 4"
+	puts $fileId 		"FILETYPE 1"
+	puts $fileId 		"{"
+	puts $fileId 		"	BLOCK \"StringFileInfo\" {"
+	puts $fileId 		"		BLOCK \"040904b0\" {"
+	if {[string length [$info_fileDesc get]] > 0} {
+		puts $fileId 	"			VALUE \"FileDescription\", \"[$info_fileDesc get]\""
+	}
+	if {[string length [$info_origName get]] > 0} {
+		puts $fileId 	"			VALUE \"OriginalFilename\", \"[$info_origName get]\""
+	}
+	if {[string length [$info_company get]] > 0} {
+		puts $fileId 	"			VALUE \"CompanyName\", \"[$info_company get]\""
+	}
+	if {[string length [$info_copyright get]] > 0} {
+		puts $fileId 	"			VALUE \"LegalCopyright\", \"[$info_copyright get]\""
+	}
+	if {[string length [$info_prodName get]] > 0} {
+		puts $fileId 	"			VALUE \"ProductName\", \"[$info_prodName get]\""
+	}
+	puts $fileId 		"			VALUE \"FileVersion\", \"[$info_fileVersion(1) get].[$info_fileVersion(2) get].[$info_fileVersion(3) get].[$info_fileVersion(4) get]\""
+	puts $fileId 		"			VALUE \"ProductVersion\", \"[$info_fileVersion(1) get].[$info_fileVersion(2) get].[$info_fileVersion(3) get].[$info_fileVersion(4) get]\""
+	puts $fileId 		"		}"
+	puts $fileId 		"	}"
+	puts $fileId 		"	BLOCK \"VarFileInfo\" {"
+	puts $fileId 		"		VALUE \"Translation\", 0x0409, 0x04B0"
+	puts $fileId 		"	}"
+	puts $fileId 		"}"
+	close $fileId
+	
+	# Convert RC to RES
+	set statusVariable "Generating RES from RC"
+	exec $APP_DIR/resources/$PATH_gorc /r "tclkitty.rc"
+	lappend cleanupList "tclkitty.rc"
+	lappend cleanupList "tclkitty.res"
+	
+	# Add Res
+	set statusVariable "Adding RES to executable"
+	exec $APP_DIR/resources/$PATH_ResHacker -add $filenameMinusExtension$ExeExtension , $filenameMinusExtension$ExeExtension , tclkitty.res , ,,
+	
+	set statusVariable "Re-compressing with UPX"
+	exec $APP_DIR/resources/$PATH_upx $filenameMinusExtension$ExeExtension
 }
 
 proc getFilenameWithoutExtension {fn} {
@@ -168,36 +262,29 @@ proc getFilename {fn} {
 	set filenameMinusExtension [string range $fn $a end]
 }
 
-proc cleanup {reason} {
-	global cleanupList
-	puts $reason
-	foreach f $cleanupList {
-		puts "file delete -force -- $f"
-	}
-}
-
 proc about {} {
 	
 }
 
-proc kill {pid} {
-	if {$::PLATFORM == $::PLATFORM_WIN} {
-		exec [auto_execok taskkill] /F /PID $pid
-	} else {
-		exec kill -KILL $pid
-		# Or TERM
-	}
+proc showStatus {} {
+	global statusVariable
+	
+    if [winfo exists .statusDialog] {
+	    wm withdraw .statusDialog
+		wm deiconify .statusDialog
+		.statusDialog.bar start
+        return
+    }
+	
+	toplevel .statusDialog
+    wm title .statusDialog "Status"
+    wm resizable .statusDialog 0 0
+	
+	label .statusDialog.text -textvariable statusVariable
+	ttk::progressbar .statusDialog.bar -length 400
+	
+	pack .statusDialog.text
+	pack .statusDialog.bar
+	.statusDialog.bar start
+	
 }
-
-# Returns 1 if the file was created, 0 otherwise
-proc waitForFile {f} {
-	set i 0
-	while {![file exists $f] && $i<100000} {
-		incr i
-	}
-	if {[file exists $f]} {
-		return 1
-	}
-	return 0
-}
-

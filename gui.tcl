@@ -99,6 +99,20 @@ if {$::PLATFORM == $::PLATFORM_WIN} {
 
 grid config [ttk::label $mainframe.sep2 ] -row  14 -column 0 -columnspan 5
 
+# Packages
+set pkgFiles_l [ttk::label $mainframe.pkgFiles_l -text "Packages"]
+set pkgFiles   [listbox $mainframe.pkgFiles -width 90 -selectmode multiple -listvariable pkgFilesList -height 5]
+set pkgFiles_folder [ttk::button $mainframe.pkgFiles_adF -text "+Folder" -command "browseDialog FOLDER $pkgFiles {} 1"]
+set pkgFiles_remove [ttk::button $mainframe.pkgFiles_adX -text "-Remove" -command removeExtra]
+set pkgFiles_note [ttk::label $mainframe.extraFiles_note -text "ALL packages you need! These will be stored inside 'lib' on the vfs."]
+
+grid config $pkgFiles_l				-row 15 -column 0 -sticky w
+grid config $pkgFiles				-row 16 -column 0 -sticky w -columnspan 3 -rowspan 6
+grid config $pkgFiles_folder		-row 16 -column 5 -sticky w
+grid config $pkgFiles_remove		-row 17 -column 5 -sticky w
+grid config $pkgFiles_note			-row 23 -column 0 -sticky w -columnspan 3 -padx 24
+
+
 # Extra Files
 set extraFiles_l [ttk::label $mainframe.extraFiles_l -text "Files"]
 set extraFiles   [listbox $mainframe.extraFiles -width 90 -selectmode multiple -listvariable extraFilesList]
@@ -106,22 +120,22 @@ set extraFiles_file [ttk::button $mainframe.extraFiles_adf -text "+File" -comman
 set extraFiles_folder [ttk::button $mainframe.extraFiles_adF -text "+Folder" -command "browseDialog FOLDER $extraFiles {} 1"]
 set extraFiles_remove [ttk::button $mainframe.extraFiles_adX -text "-Remove" -command removeExtra]
 set extraFiles_note1 [ttk::label $mainframe.extraFiles_note1 -text "The above files & folders will all be placed in the root directory of the virtual FS"]
-set extraFiles_note2 [ttk::label $mainframe.extraFiles_note2 -text "(To access these files, use the '\$starkit::topdir/lib' in your scripts when it is compiled)"]
+set extraFiles_note2 [ttk::label $mainframe.extraFiles_note2 -text "(To access these files, use '\$starkit::topdir' in your scripts when it is compiled)"]
 
-grid config $extraFiles_l				-row 15 -column 0 -sticky w
-grid config $extraFiles					-row 16 -column 0 -sticky w -columnspan 3 -rowspan 6
-grid config $extraFiles_file			-row 16 -column 5 -sticky w
-grid config $extraFiles_folder			-row 17 -column 5 -sticky w
-grid config $extraFiles_remove			-row 18 -column 5 -sticky w
-grid config $extraFiles_note1			-row 23 -column 0 -sticky w -columnspan 3 -padx 24
-grid config $extraFiles_note2			-row 24 -column 0 -sticky w -columnspan 3 -padx 24
+grid config $extraFiles_l				-row 25 -column 0 -sticky w
+grid config $extraFiles					-row 26 -column 0 -sticky w -columnspan 3 -rowspan 6
+grid config $extraFiles_file			-row 26 -column 5 -sticky w
+grid config $extraFiles_folder			-row 27 -column 5 -sticky w
+grid config $extraFiles_remove			-row 28 -column 5 -sticky w
+grid config $extraFiles_note1			-row 32 -column 0 -sticky w -columnspan 3 -padx 24
+grid config $extraFiles_note2			-row 33 -column 0 -sticky w -columnspan 3 -padx 24
 
 
 # Buttons
 set build [ttk::button $mainframe.build -text "Build" -command build]
 set about [ttk::button $mainframe.about -text "About" -command about]
-grid config $build						-row 25 -column 5 -sticky e
-grid config $about						-row 26 -column 5 -sticky e
+grid config $build						-row 36 -column 5 -sticky e
+grid config $about						-row 37 -column 5 -sticky e
 
 
 pack $mainframe -padx 20 -pady 15
@@ -136,6 +150,8 @@ proc browseDialog {openOrSaveOrFolder widget extension multifile} {
 	global extraFilesList
 	global mainfile
 	global outputfolder
+	
+	puts "Last Browse: $lastBrowseDir"
 	
 	set types_ [list {Tcl Scripts} $extension]
 	set types [list $types_]
