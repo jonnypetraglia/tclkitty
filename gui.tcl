@@ -2,7 +2,7 @@ set mainframe [ttk::frame .mainframe]
 
 # INPUT FILE
 set mainfile_l  [ttk::label $mainframe.mainfile_l -text "Main File"]
-set mainfile	[ttk::entry $mainframe.mainfile -width 80]
+set mainfile	[ttk::entry $mainframe.mainfile -width 90]
 set mainfile_b  [ttk::button $mainframe.mainfile_b -text "…" -command "browseDialog OPEN $mainfile tcl 0"]
 
 grid config $mainfile_l			-row 0 -column 0 -sticky w
@@ -11,19 +11,19 @@ grid config $mainfile_b			-row 1 -column 5
 
 
 # OUTPUT FILE
-set outputfile_l [ttk::label $mainframe.outputfile_l -text "Output File"]
-set outputfile	[ttk::entry $mainframe.outputfile -width 80]
-set outputfile_b  [ttk::button $mainframe.outputfile_b -text "…" -command "browseDialog SAVE $outputfile \"$ExeExtension\" 0"]
+set outputfolder_l [ttk::label $mainframe.outputfolder_l -text "Output Directory"]
+set outputfolder	[ttk::entry $mainframe.outputfolder -width 90]
+set outputfolder_b  [ttk::button $mainframe.outputfolder_b -text "…" -command "browseDialog FOLDER $outputfolder \"$ExeExtension\" 0"]
  
-grid config $outputfile_l		-row 2 -column 0 -sticky w
-grid config $outputfile			-row 3 -column 0 -columnspan 4
-grid config $outputfile_b		-row 3 -column 5
+grid config $outputfolder_l		-row 2 -column 0 -sticky w
+grid config $outputfolder			-row 3 -column 0 -columnspan 4
+grid config $outputfolder_b		-row 3 -column 5
 
 
 # ICON
 if {$::PLATFORM == $::PLATFORM_WIN || $::PLATFORM ==  $::PLATFORM_MAC} {
 	set iconfile_l  [ttk::label $mainframe.iconfile_l -text "Icon File (Optional)"]
-	set iconfile	[ttk::entry $mainframe.iconfile -width 80]
+	set iconfile	[ttk::entry $mainframe.iconfile -width 90]
 	set iconfile_b  [ttk::button $mainframe.iconfile_b -text "…" -command {browseDialog OPEN $iconfile $IconExtension 0}]
 	 
 	grid config $iconfile_l		-row 4 -column 0 -sticky w
@@ -31,15 +31,26 @@ if {$::PLATFORM == $::PLATFORM_WIN || $::PLATFORM ==  $::PLATFORM_MAC} {
 	grid config $iconfile_b		-row 5 -column 5
 }
 
+
+variable info_fileVersion
+variable info_prodVersion
+set spinnerList [list BackSpace Delete Prior Next Right Left Up Down]
 # File Info
 if {$::PLATFORM == $::PLATFORM_WIN} {
 	grid config [ttk::label $mainframe.sep ] -row  6 -column 0 -columnspan 5
 
+	set infoFrame [ttk::frame $mainframe.infoFrame]
 	set info_fileVersion_l [ttk::label $mainframe.infoVersion_l -text "File Version:"]
-	set info_fileVersion   [spinbox $mainframe.infoVersion -width 15]
-	
 	grid config $info_fileVersion_l		-row  7 -column 0 -sticky e -ipadx 10
-	grid config $info_fileVersion		-row  7 -column 1 -sticky w -columnspan 3
+	for {set i 1} {$i<=4} {incr i} {
+		set info_fileVersion($i)  [ttk::spinbox $infoFrame.infoVersion$i -width 7 -from 0 -to 65535 -justify center]
+		grid config $info_fileVersion($i) -row 0 -column $i
+		$info_fileVersion($i) set 0
+		bind $info_fileVersion($i) <KeyPress> { 
+			if {![string is integer "%K"] && [lsearch $spinnerList "%K"]==-1} break
+		}
+	}
+	grid config $infoFrame				-row  7 -column 1 -sticky w -columnspan 3
 	
 	set info_fileDesc_l [ttk::label $mainframe.fileDesc_l -text "File Description"]
 	set info_fileDesc   [ttk::entry $mainframe.fileDesc -width 60]
@@ -47,11 +58,18 @@ if {$::PLATFORM == $::PLATFORM_WIN} {
 	grid config $info_fileDesc_l		-row  8 -column 0 -sticky e -ipadx 10
 	grid config $info_fileDesc			-row  8 -column 1 -sticky w -columnspan 3
 	
+	set prodFrame [ttk::frame $mainframe.prodFrame]
 	set info_prodVersion_l [ttk::label $mainframe.prodVersion_l -text "Product Version:"]
-	set info_prodVersion   [spinbox $mainframe.prodVersion -width 15]
-	
 	grid config $info_prodVersion_l		-row  9 -column 0 -sticky e -ipadx 10
-	grid config $info_prodVersion		-row  9 -column 1 -sticky w -columnspan 3
+	for {set i 1} {$i<=4} {incr i} {
+		set info_prodVersion($i)  [ttk::spinbox $prodFrame.prodVersion$i -width 7 -from 0 -to 65535 -justify center]
+		grid config $info_prodVersion($i) -row 0 -column $i
+		$info_prodVersion($i) set 0
+		bind $info_prodVersion($i) <KeyPress> { 
+			if {![string is integer "%K"] && [lsearch $spinnerList "%K"]==-1} break
+		}
+	}
+	grid config $prodFrame				-row  9 -column 1 -sticky w -columnspan 3
 	
 	set info_prodName_l [ttk::label $mainframe.prodName_l -text "Product name"]
 	set info_prodName   [ttk::entry $mainframe.prodName -width 60]
@@ -82,13 +100,13 @@ if {$::PLATFORM == $::PLATFORM_WIN} {
 grid config [ttk::label $mainframe.sep2 ] -row  14 -column 0 -columnspan 5
 
 # Extra Files
-set extraFiles_l [ttk::label $mainframe.extraFiles_l -text "Extra Files"]
+set extraFiles_l [ttk::label $mainframe.extraFiles_l -text "Files"]
 set extraFiles   [listbox $mainframe.extraFiles -width 90 -selectmode multiple -listvariable extraFilesList]
 set extraFiles_file [ttk::button $mainframe.extraFiles_adf -text "+File" -command "browseDialog OPEN $extraFiles \"*\" 1"]
 set extraFiles_folder [ttk::button $mainframe.extraFiles_adF -text "+Folder" -command "browseDialog FOLDER $extraFiles {} 1"]
 set extraFiles_remove [ttk::button $mainframe.extraFiles_adX -text "-Remove" -command removeExtra]
 set extraFiles_note1 [ttk::label $mainframe.extraFiles_note1 -text "The above files & folders will all be placed in the root directory of the virtual FS"]
-set extraFiles_note2 [ttk::label $mainframe.extraFiles_note2 -text "(To access these files, use the starkit::topdir variable in your scripts when it is compiled)"]
+set extraFiles_note2 [ttk::label $mainframe.extraFiles_note2 -text "(To access these files, use the '\$starkit::topdir/lib' in your scripts when it is compiled)"]
 
 grid config $extraFiles_l				-row 15 -column 0 -sticky w
 grid config $extraFiles					-row 16 -column 0 -sticky w -columnspan 3 -rowspan 6
@@ -100,10 +118,10 @@ grid config $extraFiles_note2			-row 24 -column 0 -sticky w -columnspan 3 -padx 
 
 
 # Buttons
-set about [ttk::button $mainframe.about -text "About" -command about]
 set build [ttk::button $mainframe.build -text "Build" -command build]
-grid config $about						-row 25 -column 5 -sticky e -pady 10
-grid config $build						-row 25 -column 4 -sticky e -pady 10
+set about [ttk::button $mainframe.about -text "About" -command about]
+grid config $build						-row 25 -column 5 -sticky e
+grid config $about						-row 26 -column 5 -sticky e
 
 
 pack $mainframe -padx 20 -pady 15
@@ -116,6 +134,8 @@ proc browseDialog {openOrSaveOrFolder widget extension multifile} {
 	global lastBrowseDir
 	global extraFiles
 	global extraFilesList
+	global mainfile
+	global outputfolder
 	
 	set types_ [list {Tcl Scripts} $extension]
 	set types [list $types_]
@@ -145,6 +165,11 @@ proc browseDialog {openOrSaveOrFolder widget extension multifile} {
 	}
 	
 	set lastBrowseDir [file dirname $chosenFile]
+	
+	if {$widget == $mainfile && [string length [$outputfolder get]]==0} {
+		$outputfolder delete 0 end
+		$outputfolder insert 0 $lastBrowseDir
+	}
 }
 
 proc removeExtra {} {

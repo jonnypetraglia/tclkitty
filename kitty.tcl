@@ -1,66 +1,123 @@
-source header.tcl
-source gui.tcl
+variable APP_DIR
+if [info exists starkit::topdir] {
+	set APP_DIR $starkit::topdir
+} else {
+	set APP_DIR "[file normalize [pwd]/[file dirname [info script]]]"
+}
+
+source $APP_DIR/header.tcl
+source $APP_DIR/gui.tcl
 
 
 
 proc build {} {
 	global APP_DIR
 	global PATH_tclkit
+	global PATH_tclcompiler
 	global PATH_sdx
+	
 	global mainfile
-	global outputfile
+	global outputfolder
+	global iconfile
+	
 	global extraFilesList
 	global cleanupList
 	global ExeExtension
 	
+	global info_prodVersion
+	global info_fileVersion
+	
 	################### Get string things ###################
 	# Get info from gui
 	set Vmainfile [$mainfile get]
-	set Voutputfile [$outputfile get]
+	set Voutputfolder [$outputfolder get]
+	set Viconfile [$iconfile get]
 	
-	set a [expr [string length [file dirname $Vmainfile]] +1]
-	set b [expr [string length $Vmainfile] - [string length [file extension $Vmainfile]] -1]
-	set filenameMinusExtension [string range $Vmainfile $a $b]
+	set filenameMinusExtension [getFilenameWithoutExtension $Vmainfile]
 	set kitfile $filenameMinusExtension.kit	
 	set vfsfolder $filenameMinusExtension.vfs
-	set outputfile $filenameMinusExtension$ExeExtension
+	set outputexe $filenameMinusExtension$ExeExtension
 	set tempfolder "TMP_BUILD"
 	
 	# CD to dir
 	cd "[file dirname $Vmainfile]"
 	
+	#### Sanity Check ####
+	if {![file exists $Vmainfile]} {
+		tk_messageBox -icon error -title "File not Found" -message "Main File does not exist"
+		return
+	}
+	if {[ catch {file mkdir $Voutputfolder} ]} {
+		tk_messageBox -icon error -title "File not Found" -message "Folder for output file is inaccessible"
+		return
+	}
+	if {[string length $Viconfile]>0} {
+		if {![file exists $Viconfile]} {
+			tk_messageBox -icon error -title "File not Found" -message "Icon File does not exist"
+			return
+		}
+	}
 	
+	### WOMBOWS ###
+	if {$::PLATFORM == $::PLATFORM_WIN} {
+		for {set i 1} {$i<=4} {incr i} {
+			set x [$info_prodVersion($i) get]
+			if {[string length $x]==0} {
+				$info_prodVersion($i) set 0
+			} else {
+				if {![string is integer $x] || $x<0 || $x>65535} {
+					tk_messageBox -icon error -title "Invalid Value" -message "Bad value in the ProductVersion:\n\n$x\n\n(Maximum is 65535)"
+					return
+				}
+			}
+			set x [$info_fileVersion($i) get]
+			if {[string length $x]==0} {
+				$info_fileVersion($i) set 0
+			} else {
+				if {![string is integer $x] || $x<0 || $x>65535} {
+					tk_messageBox -icon error -title "Invalid Value" -message "Bad value in the ProductVersion:\n\n$x\n\n(Maximum is 65535)"
+					return
+				}
+			}
+		}
+	}
+
+
 	#### Clean ####
 	file delete -force -- $vfsfolder
 	file delete -force -- $kitfile
-	file delete -force -- $outputfile
+	file delete -force -- $outputexe
 	file delete -force -- $tempfolder
 	
 	################### Create .kit ###################
-	set pid [exec "$APP_DIR/resources/$PATH_tclkit" "$APP_DIR/resources/$PATH_sdx" qwrap "$Vmainfile" "&"]
-	if {![waitForFile $kitfile]} {
-		cleanup "ERROR: kitfile"
-		kill $pid
-		return
-	}
-	kill $pid
+	puts "create"
+	exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" qwrap "$Vmainfile"
+	puts "create2"
+	#if {![waitForFile $kitfile]} {
+		#cleanup "ERROR: kitfile"
+		#kill $pid
+		#return
+	#}
+	#kill $pid
 	lappend cleanupList $kitfile
 	
 	################### Unwrap .kit ###################
-	set pid [exec "$APP_DIR/resources/$PATH_tclkit" "$APP_DIR/resources/$PATH_sdx" unwrap "$kitfile" "&"]
-	if {![waitForFile $vfsfolder]} {
-		cleanup "ERROR: unwrap"
-		kill $pid
-		return
-	}
-	kill $pid
+	set pid [exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" unwrap "$kitfile"]
+	#if {![waitForFile $vfsfolder]} {
+		#cleanup "ERROR: unwrap"
+		#kill $pid
+		#return
+	#}
+	#kill $pid
 	lappend cleanupList $vfsfolder
-	
+
 	################### Copy extra files into $filenameMinusExtension.vfs ###################
 
 	foreach f $extraFilesList {
-		file copy $f $vfsfolder\.
-		if {[file exists $f]} {
+		#set newfile "$vfsfolder/lib/app-$filenameMinusExtension/[getFilename $f]"
+		set newfile "$vfsfolder/[getFilename $f]"
+		file copy $f $newfile
+		if {![file exists $newfile]} {
 			cleanup "ERROR: xtra files:   $f"
 			return
 		}
@@ -69,34 +126,53 @@ proc build {} {
 	################### Re-wrap ###################
 
 	# Create copy of tclkit executable
-	set tclCopy "$tempfolder/$PATH_tclkit"
-	file mkdir $tempfolder
-	file copy -force -- "$APP_DIR/resources/$PATH_tclkit" "$tclCopy"
-	lappend cleanupList "$tempfolder"
-	if {![file exists $tclCopy]} {
-		cleanup "ERROR: tempdir  $tclCopy"
-		return
-	}
+	#set tclCopy "$tempfolder/$PATH_tclkit"
+	#file mkdir $tempfolder
+	#file copy -force -- "$APP_DIR/resources/$PATH_tclkit" "$tclCopy"
+	#lappend cleanupList "$tempfolder"
+	#if {![file exists $tclCopy]} {
+		#cleanup "ERROR: tempdir  $tclCopy"
+		#return
+	#}
 	
-	set pid [exec "$APP_DIR/resources/$PATH_tclkit" "$APP_DIR/resources/$PATH_sdx" wrap "$outputfile" "-runtime" "$tclCopy" "&"]
-	if {![waitForFile $outputfile]} {
-		cleanup "ERROR: re-wrap"
-		kill $pid
-		return
-	}
-	kill $pid
-	while {[file exists $tclCopy] && [catch {[file delete -force -- $tclCopy]}]} {
-		puts "Waiting... $pid    $tclCopy"
-	}
+	set pid [exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" wrap "$outputexe" "-runtime" "$APP_DIR/resources/$PATH_tclkit"]
+	#if {![waitForFile $outputexe]} {
+		#cleanup "ERROR: re-wrap"
+		#kill $pid
+		#return
+	#}
+	# Wait a second
+	#set derp 0
+	#after 1000 { set derp 1}
+	#vwait derp
 	
-	#cleanup "SUCCESS!    $outputfile"
+	#while {[file exists $outputexe.tmp]} {
+	#	puts "$outputexe.tmp"
+	#}
+	#kill $pid
+	#while {[file exists $tclCopy] && [catch {[file delete -force -- $tclCopy]}]} {
+	#	puts "Waiting... $pid    $tclCopy"
+	#}
+	
+	cleanup "SUCCESS!    $outputexe"
+}
+
+proc getFilenameWithoutExtension {fn} {
+	set a [expr [string length [file dirname $fn]] +1]
+	set b [expr [string length $fn] - [string length [file extension $fn]] -1]
+	set filenameMinusExtension [string range $fn $a $b]
+}
+
+proc getFilename {fn} {
+	set a [expr [string length [file dirname $fn]] +1]
+	set filenameMinusExtension [string range $fn $a end]
 }
 
 proc cleanup {reason} {
 	global cleanupList
 	puts $reason
 	foreach f $cleanupList {
-		file delete -force -- $f
+		puts "file delete -force -- $f"
 	}
 }
 

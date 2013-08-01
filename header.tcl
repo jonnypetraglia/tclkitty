@@ -17,14 +17,6 @@ switch $tcl_platform(platform) {
 }
 
 
-variable APP_DIR
-if [info exists starkit::topdir] {
-	set APP_DIR $starkit::topdir
-} else {
-	set APP_DIR "[file normalize [pwd]/[file dirname [info script]]]"
-}
-
-
 # TODO: Spinners for 0.0.0.0
 
 
@@ -46,7 +38,8 @@ if {$::PLATFORM == $::PLATFORM_WIN} {
 	set KitExtension .kit
 	set IconExtension .ico
 	
-	set PATH_tclkit "tclkit-win32.upx.exe"
+	set PATH_tclcompiler "tclkitsh860.exe"
+	set PATH_tclkit "tclkit-gui-860.exe"
 	set PATH_sdx "sdx-20110317.kit"
 	set PATH_upx "upx.exe"
 	set PATH_ResHacker "ResHacker.exe"
