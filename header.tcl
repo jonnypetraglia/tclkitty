@@ -1,22 +1,3 @@
-set ::PLATFORM_MAC "macosx"
-set ::PLATFORM_WIN "windows"
-set ::PLATFORM_UNIX "unix"
-
-set ::PLATFORM $::PLATFORM_WIN	;#TODO This should not be necessary
-switch $tcl_platform(platform) {
-    "unix" {
-        if {$tcl_platform(os) == "Darwin"} {
-            set ::PLATFORM $::PLATFORM_MAC
-        } else {
-            set ::PLATFORM $::PLATFORM_UNIX
-        }
-    }
-    "windows" {
-        set ::PLATFORM $::PLATFORM_WIN
-    }
-}
-
-
 package require Tk
 
 

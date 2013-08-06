@@ -1,31 +1,47 @@
+set ::PLATFORM_MAC "macosx"
+set ::PLATFORM_WIN "windows"
+set ::PLATFORM_UNIX "unix"
+
+set ::PLATFORM $::PLATFORM_WIN	;#TODO This should not be necessary
+switch $tcl_platform(platform) {
+    "unix" {
+        if {$tcl_platform(os) == "Darwin"} {
+            set ::PLATFORM $::PLATFORM_MAC
+        } else {
+            set ::PLATFORM $::PLATFORM_UNIX
+        }
+    }
+    "windows" {
+        set ::PLATFORM $::PLATFORM_WIN
+    }
+}
+
+
 variable APP_DIR
+variable REAL_DIR
+variable res_dir
 if [info exists starkit::topdir] {
+    set REAL_DIR "[file normalize $starkit::topdir/..]"
     set APP_DIR $starkit::topdir
+    # If it is inside of an APP bundle, point res_dir to the Contents/Resources directory
+    if {$::PLATFORM == $::PLATFORM_MAC && [regexp {^.*.app$} [file normalize $REAL_DIR/../..]]} {
+        set res_dir [file normalize $REAL_DIR/../Resources]
+    } else {
+        set res_dir $REAL_DIR/resources
+    }
 } else {
-    set APP_DIR "[file normalize [pwd]/[file dirname [info script]]]"
+    set REAL_DIR "[file normalize [pwd]/[file dirname [info script]]/]"
+    set APP_DIR $REAL_DIR
+    set res_dir $REAL_DIR/resources
 }
 
 source $APP_DIR/header.tcl
 source $APP_DIR/gui.tcl
 
-# Download tclkit:
-#    http://www.patthoyts.tk/tclkit
-#    http://www.openverse.com/~lilith/TCL/
-#    http://equi4.com/pub/tk/
-# SDX commands:
-#    http://wiki.tcl.tk/3411
-# Building tclkit:
-#    http://code.google.com/p/tclkit/issues/detail?id=11
-#    http://code.google.com/p/tclkit/wiki/BuildingTclkit
-
-# TODO:
-#        x86 vs x64 RadioButton
-#        sdx options for final wrapping
-#            -nocomp        Do not compress files added to starkit
-#            -writable    Allow modifications (must be single writer)
 
 proc build {} {
     global APP_DIR
+    global res_dir
     global PATH_tclkit
     global PATH_tclcompiler
     global PATH_sdx
@@ -39,8 +55,15 @@ proc build {} {
     global cleanupList
     global ExeExtension
     
+    global createMacApp
     global info_prodVersion
     global info_fileVersion
+    global macVersion
+    global macVersionrel
+    global info_id
+    global info_name
+    global macInfoEnabled
+
     
     ################### Get string things ###################
     # Get info from gui
@@ -96,7 +119,43 @@ proc build {} {
             }
         }
     }
-
+    #MERC
+    set maxVals [list 0 429496 99 99]
+    if {$::PLATFORM == $::PLATFORM_MAC && $createMacApp} {
+        # Check Mac Version & Release Version
+        for {set i 1} {$i<=3} {incr i} {
+            set x [$macVersion($i) get]
+            if {[string length $x]==0} {
+                $macVersion($i) set 0
+            } else {
+                if {![string is integer $x] || $x<0 || $x>[lindex $maxVals $i]} {
+                    tk_messageBox -icon error -title "Invalid Value" -message "Bad value in the Build Version:\n\n$x\n\n(Maximum is [lindex $maxVals $i])"
+                    return
+                }
+            }
+            set x [$macVersionrel($i) get]
+            if {[string length $x]==0} {
+                $fileVersionrel($i) set 0
+            } else {
+                if {![string is integer $x] || $x<0 || $x>[lindex $maxVals $i]} {
+                    tk_messageBox -icon error -title "Invalid Value" -message "Bad value in the Release Versions:\n\n$x\n\n(Maximum is [lindex $maxVals $i])"
+                    return
+                }
+            }
+        }
+        # Check name 
+        set x [$info_name get]
+        if {[string length $x] == 0} {
+            tk_messageBox -icon error -title "Invalid Value" -message "You must enter an App Name"
+            return
+        }
+        # Check identifier is valid
+        set x [$info_id get]
+        if {$macInfoEnabled(id) && [regexp {^[a-zA-Z\-\.]*$} $x] == 0} {
+            tk_messageBox -icon error -title "Invalid Value" -message "Bad value in the Identifier:\n\n$x\n\n(Can only contain A-Z, a-z, - and .)"
+            return
+        }
+    }
 
     showStatus
     update idletasks
@@ -110,7 +169,7 @@ proc build {} {
     
     ################### Create .kit ###################
     set statusVariable "Creating starkit file:        $kitfile"
-    exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" qwrap "$Vmainfile"
+    exec "$res_dir/$PATH_tclcompiler" "$res_dir/$PATH_sdx" qwrap "$Vmainfile"
     if {![file exists $kitfile]} {
         cleanup "Error" "kitfile"
         return
@@ -119,7 +178,7 @@ proc build {} {
     
     ################### Unwrap .kit ###################
     set statusVariable "Unwrapping starkit file:    $vfsfolder"
-    exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" unwrap "$kitfile"
+    exec "$res_dir/$PATH_tclcompiler" "$res_dir/$PATH_sdx" unwrap "$kitfile"
     if {![file exists $vfsfolder]} {
         cleanup "Error" "vfs folder"
         return
@@ -150,7 +209,7 @@ proc build {} {
 
     ################### Re-wrap ###################
     set statusVariable "Final re-wrapping:        $outputexe"
-    exec "$APP_DIR/resources/$PATH_tclcompiler" "$APP_DIR/resources/$PATH_sdx" wrap "$outputexe" "-runtime" "$APP_DIR/resources/$PATH_tclkit"
+    exec "$res_dir/$PATH_tclcompiler" "$res_dir/$PATH_sdx" wrap "$outputexe" "-runtime" "$res_dir/$PATH_tclkit"
     if {![file exists $outputexe]} {
         cleanup "Error" "final exe"
         return
@@ -158,20 +217,129 @@ proc build {} {
     
     if {$::PLATFORM == $::PLATFORM_WIN} {
         windowsIconAndInfo $Viconfile $filenameMinusExtension
-    } elseif {$::PlATFORM == $::PLATFORM_MAC} {
-        exec $APP_DIR/resources/$PATH_upx $filenameMinusExtension$ExeExtension
+        file rename -force -- $outputexe $Voutputfolder/.
+        cleanup "Info" "Successfully generated:\n$Voutputfolder/[getFilename $outputexe]"
     }
-    cleanup "Info" "Successfully generated:\n$outputexe"
+    
+    if {$::PLATFORM == $::PLATFORM_MAC && $createMacApp} {
+        if {$createMacApp} {
+            file delete -force -- $Voutputfolder/[$info_name get].app
+            macCreateApp $Viconfile $filenameMinusExtension $Voutputfolder
+            cleanup "Info" "Successfully generated:\n$Voutputfolder/[$info_name get].app"
+        } else {
+            file rename -force -- $outputexe $Voutputfolder/.
+            cleanup "Info" "Successfully generated:\n$Voutputfolder/[getFilename $outputexe]"
+        }
+    }
 }
 
 proc cleanup {reasonType reasonMsg} {
     global cleanupList
+    global doCleanup
     set statusVariable "Cleaning up..."
-    foreach f $cleanupList {
-        puts "file delete -force -- $f"
+    puts "DERP $doCleanup"
+    if {$doCleanup} {
+        foreach f $cleanupList {
+            file delete -force -- $f
+        }
     }
     wm withdraw .statusDialog 
     tk_messageBox -icon [string tolower $reasonType] -message $reasonMsg -title $reasonType
+}
+
+proc macCreateApp {iconfile filenameMinusExtension outputfolder} {
+    global ExeExtension
+    global info_name
+    global macVersion
+    global macVersionrel
+    global info_region
+    global info_id
+    global info_dict
+    global macInfoEnabled
+
+    #From GUI
+        set CFBundleName [$info_name get]
+        set CFBundleVersion "[$macVersion(1) get].[$macVersion(2) get].[$macVersion(3) get]"
+        set CFBundleShortVersionString "[$macVersionrel(1) get].[$macVersionrel(2) get].[$macVersionrel(3) get]"
+        set CFBundleDevelopmentRegion [$info_region get]
+        set CFBundleIdentifier [$info_id get]
+        set CFBundleInfoDictionaryVersion [$info_dict get]
+        set CFBundleIconFile [getFilename $iconfile]
+        #CFBundleSignature???
+        #CFBundleGetInfoString???
+
+    #Calculated
+        set CFBundleExecutable $filenameMinusExtension$ExeExtension
+
+    #Misc
+        set CFBundlePackageType "APPL"
+        set LSRequiresCarbon "true"
+        set NSAppleScriptEnabled "false"
+        set LSMinimumSystemVersion "10.4.0"
+    
+    # 1. Make directory structure
+    set statusVariable "Creating Mac directory structure"
+    file mkdir $outputfolder/$CFBundleName.app
+    file mkdir $outputfolder/$CFBundleName.app/Contents
+    file mkdir $outputfolder/$CFBundleName.app/Contents/MacOs
+    file mkdir $outputfolder/$CFBundleName.app/Contents/Resources
+    # 2. Copy $iconfile
+    if {[string length $iconfile] > 0} {
+        set statusVariable "Copying Mac icon file"
+        file copy -force -- $iconfile $outputfolder/$CFBundleName.app/Contents/Resources/$CFBundleIconFile
+    }
+    # 3. Move
+    set statusVariable "Copying application to Mac package"
+    file rename -force -- $filenameMinusExtension$ExeExtension $outputfolder/$CFBundleName.app/Contents/MacOs/$CFBundleExecutable
+    # 4. Create plist
+    set statusVariable "Creating the plist file"
+    set fileId [open "$outputfolder/$CFBundleName.app/Contents/Info.plist" "w"]
+    
+    puts $fileId        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+    puts $fileId        "<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">"
+    puts $fileId        "<plist version=\"1.0\">"
+    puts $fileId        "<dict>"
+    puts $fileId        "	<key>CFBundleName</key>"
+    puts $fileId        "	<string>$CFBundleName</string>"
+    if {$macInfoEnabled(version)} {
+        puts $fileId    "	<key>CFBundleVersion</key>"
+        puts $fileId    "	<string>$CFBundleVersion</string>"
+    }
+    if {$macInfoEnabled(relversion)} {
+        puts $fileId    "	<key>CFBundleShortVersionString</key>"
+        puts $fileId    "	<string>$CFBundleShortVersionString</string>"
+    }
+    if {$macInfoEnabled(id)} {
+        puts $fileId    "	<key>CFBundleIdentifier</key>"
+        puts $fileId    "	<string>$CFBundleIdentifier</string>"
+    }
+    if {$macInfoEnabled(region)} {
+        puts $fileId    "	<key>CFBundleDevelopmentRegion</key>"
+        puts $fileId    "	<string>$CFBundleDevelopmentRegion</string>"
+    }
+    if {$macInfoEnabled(dict)} {
+        puts $fileId    "	<key>CFBundleInfoDictionaryVersion</key>"
+        puts $fileId    "	<string>$CFBundleInfoDictionaryVersion</string>"
+    }
+
+    puts $fileId        "	<key>CFBundleExecutable</key>"
+    puts $fileId        "	<string>$CFBundleExecutable</string>"
+    if {[string length $iconfile] > 0} {
+        puts $fileId        "	<key>CFBundleIconFile</key>"
+        puts $fileId        "	<string>$CFBundleIconFile</string>"
+    }
+    puts $fileId        "	<key>CFBundlePackageType</key>"
+    puts $fileId        "	<string>$CFBundlePackageType</string>"
+    puts $fileId        "	<key>LSRequiresCarbon</key>"
+    puts $fileId        "	<$LSRequiresCarbon/>"
+    puts $fileId        "	<key>NSAppleScriptEnabled</key>"
+    puts $fileId        "	<$NSAppleScriptEnabled/>"
+    puts $fileId        "	<key>LSMinimumSystemVersion</key>"
+    puts $fileId        "	<string>$LSMinimumSystemVersion</string>"
+
+    puts $fileId        "</dict>"
+    puts $fileId        "</plist>"
+    close $fileId
 }
 
 proc windowsIconAndInfo {iconFile filenameMinusExtension} {
@@ -189,15 +357,16 @@ proc windowsIconAndInfo {iconFile filenameMinusExtension} {
     global PATH_upx
     global ExeExtension
     global APP_DIR
+    global res_dir
     
     # Uncompress with UPX
     set statusVariable "Uncompressing with UPX"
-    exec $APP_DIR/resources/$PATH_upx "-d" $filenameMinusExtension$ExeExtension
+    exec $res_dir/$PATH_upx "-d" $filenameMinusExtension$ExeExtension
     
     # ResHacker to remove version & icons
     set statusVariable "Removing information & icons with ResHacker"
-    exec $APP_DIR/resources/$PATH_ResHacker "-delete" "$filenameMinusExtension$ExeExtension" "," "$filenameMinusExtension$ExeExtension" "," "versioninfo" "," ","
-    exec $APP_DIR/resources/$PATH_ResHacker "-delete" "$filenameMinusExtension$ExeExtension" "," "$filenameMinusExtension$ExeExtension" "," "icongroup" "," ","
+    exec $res_dir/$PATH_ResHacker "-delete" "$filenameMinusExtension$ExeExtension" "," "$filenameMinusExtension$ExeExtension" "," "versioninfo" "," ","
+    exec $res_dir/$PATH_ResHacker "-delete" "$filenameMinusExtension$ExeExtension" "," "$filenameMinusExtension$ExeExtension" "," "icongroup" "," ","
     
     set statusVariable "Creating RC file"
     set fileId [open "tclkitty.rc" "w"]
@@ -241,16 +410,16 @@ proc windowsIconAndInfo {iconFile filenameMinusExtension} {
     
     # Convert RC to RES
     set statusVariable "Generating RES from RC"
-    exec $APP_DIR/resources/$PATH_gorc /r "tclkitty.rc"
+    exec $res_dir/$PATH_gorc /r "tclkitty.rc"
     lappend cleanupList "tclkitty.rc"
     lappend cleanupList "tclkitty.res"
     
     # Add Res
     set statusVariable "Adding RES to executable"
-    exec $APP_DIR/resources/$PATH_ResHacker -add $filenameMinusExtension$ExeExtension , $filenameMinusExtension$ExeExtension , tclkitty.res , ,,
+    exec $res_dir/$PATH_ResHacker -add $filenameMinusExtension$ExeExtension , $filenameMinusExtension$ExeExtension , tclkitty.res , ,,
     
     set statusVariable "Re-compressing with UPX"
-    exec $APP_DIR/resources/$PATH_upx $filenameMinusExtension$ExeExtension
+    exec $res_dir/$PATH_upx $filenameMinusExtension$ExeExtension
 }
 
 proc getFilenameWithoutExtension {fn} {
