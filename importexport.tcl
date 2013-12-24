@@ -25,7 +25,7 @@ proc export {} {
     
     
     ## Get Output file ##
-    set outputfile [tk_getSaveFile -filetypes {{"tclkitty file" {"tclkitty"}}}]
+    set outputfile [tk_getSaveFile -filetypes {{"tclkitty file" {".tclkitty"}}}]
     if {$outputfile == ""} {
         return
     }
@@ -101,7 +101,7 @@ proc import {} {
     
     
     ## Get Output file ##
-    set inputfile [tk_getOpenFile -filetypes {{"tclkitty file" {"tclkitty"}}}]
+    set inputfile [tk_getOpenFile -filetypes {{"tclkitty file" {".tclkitty"}}}]
     if {$inputfile == ""} {
         return
     }
