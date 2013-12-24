@@ -70,7 +70,11 @@ proc build {} {
     # Get info from gui
     set Vmainfile [$mainfile get]
     set Voutputfolder [$outputfolder get]
-    set Viconfile [$iconfile get]
+    if {[info exists iconfile]} {
+        set Viconfile [$iconfile get]
+    } else {
+        set Viconfile ""
+    }
     
     set filenameMinusExtension [getFilenameWithoutExtension $Vmainfile]
     set kitfile $filenameMinusExtension.kit    

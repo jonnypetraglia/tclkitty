@@ -33,6 +33,8 @@ if {$::PLATFORM == $::PLATFORM_WIN} {
     
 } elseif {$::PLATFORM == $::PLATFORM_UNIX} {
     set ExeExtension ""
+    set PATH_tclcompiler "tclkit-tcl-Linux64-8.6"
+    set PATH_tclkit "tclkit-tk-Linux64-8.6"
 }
 
 

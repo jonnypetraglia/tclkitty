@@ -39,8 +39,9 @@ proc export {} {
     #### Get info from gui & write it ####
     ::ini::set $ini "Main" "mainfile" [$mainfile get]
     ::ini::set $ini "Main" "outputfolder" [$outputfolder get]
-    ::ini::set $ini "Main" "iconfile" [$iconfile get]
-    
+    if {[info exists iconfile]} {
+        ::ini::set $ini "Main" "iconfile" [$iconfile get]
+    }
     
     ##### Windows #####
     if {$::PLATFORM == $::PLATFORM_WIN} {
@@ -112,7 +113,9 @@ proc import {} {
     #### Save settings to GUI ####
     $mainfile insert 0     [::ini::value $ini "Main" "mainfile"]
     $outputfolder insert 0 [::ini::value $ini "Main" "outputfolder"]
-    $iconfile insert 0     [::ini::value $ini "Main" "iconfile"]
+    if {[info exists iconfile]} {
+        $iconfile insert 0     [::ini::value $ini "Main" "iconfile"]
+    }
     
     ##### Windows #####
     if {$::PLATFORM == $::PLATFORM_WIN} {
