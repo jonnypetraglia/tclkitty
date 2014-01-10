@@ -141,7 +141,7 @@ proc import {} {
     
     set i 0
     ##### Files #####
-    for {set i 0} {$i<[llength $extraFilesList]} {incr i} {
+    while {[::ini::exists $ini "Files" "extraFiles$i"]} {
         lappend extraFilesList [::ini::value $ini "Files" "extraFiles$i"]
         incr i
     }

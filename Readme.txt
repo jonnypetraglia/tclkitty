@@ -8,7 +8,8 @@ tclkitty is a GUI to assist in generating Starkits for Tcl/Tk.
   1. What is a Starkit?
   2. What does tclkitty do?
   3. Using tclkitty
-  4. Resources used
+  4. What you can expect
+  5. Resources used
  
 -----------
  
@@ -19,7 +20,7 @@ Tcl is interpreted, meaning that you have to have a Tcl runtime installed to run
 Instead, there are some alternatives that work slightly differently. The terms can be a little confusing, so let's define them:
 
   - **Tclkit**: A bundle that contains a Tcl runtime. Basically a single file Tcl runtime.
-  - **Starkit**: A bundle containing Tcl kits, but still requires local Tcl instance to run. Think of them as Java JAR files, only for Tcl.
+  - **Starkit**: A bundle containing Tcl files, but still requires local Tcl instance to run. Think of them as Java JAR files, only for Tcl.
   - **Starpack**: A Tclkit + a Starkit. The result is a bundle that has the scripts to run, and the Tcl runtime to run them.
 
 So just to be clear, **a Starpack is _not_ a compiled binary**. It is a virtual filesystem that contains both your Tcl scripts and the Tcl runtime to run them, but the scripts are still interpreted just like regular Tcl.
@@ -76,7 +77,20 @@ Perform the build!
 
 -----------
 
-## 4. Resources used ##
+## 4. What you can expect ##
+
+I feel like I should take a few moments to be abundantly clear on some things about tclkitty.
+
+As I said before tclkitty is _not_ a compiler which means that here are the things tclkitty does not guarantee:
+  - a finished program will run (*YOU* have to check the syntax)
+  - a finished program will have all libs (*YOU* have to make sure the packages/files needed are added)
+  - a finished program's architecture will be correct (i.e., make sure any DLLs you use match the architecture of the tclkit used by tclkitty!)
+
+tclkitty is very much a work in progress and please keep in mind that it is essentially trying to do something that shouldn't be done. (Most people I find recommend using Starkits, not Starpacks.) So don't be surprised if, after wrapping a program, you see an error about a file being missing upon running it.
+
+-----------
+
+## 5. Resources used ##
 
 tclkitty uses several other programs to perform/assist in the "compilation".
 
