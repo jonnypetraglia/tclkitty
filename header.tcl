@@ -1,4 +1,5 @@
 package require Tk
+package require inifile
 
 
 variable ExeExtension

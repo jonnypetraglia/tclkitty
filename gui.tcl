@@ -286,15 +286,22 @@ grid config $extraFiles_note2			-row 8 -column 0 -sticky w -columnspan 3 -padx 2
 ################ Post tabs Files ################
 grid config $tabwidget -row 0 -column 0
 # Buttons
-set buttonbox [ttk::frame .buttons]
-set docleanup [ttk::checkbutton $buttonbox.docleanup -text "Cleanup" -variable doCleanup]
+set buttonbox1 [ttk::frame .buttons1]
+set import [ttk::button $buttonbox1.import -text "Import" -command import]
+set export [ttk::button $buttonbox1.export -text "Export" -command export]
+grid config $import						-row 0 -column 1 -sticky e
+grid config $export						-row 0 -column 2 -sticky w
+
+set buttonbox2 [ttk::frame .buttons2]
+set docleanup [ttk::checkbutton $buttonbox2.docleanup -text "Cleanup" -variable doCleanup]
 set doCleanup 1
-set about [ttk::button $buttonbox.about -text "About" -command about]
-set build [ttk::button $buttonbox.build -text "Build" -command build]
+set about [ttk::button $buttonbox2.about -text "About" -command about]
+set build [ttk::button $buttonbox2.build -text "Build" -command build]
 grid config $docleanup					-row 0 -column 0 -sticky e
 grid config $about						-row 0 -column 1 -sticky e
 grid config $build						-row 0 -column 2 -sticky w
-grid config $buttonbox -row 1 -column 0 -sticky e -ipadx 5 -ipady 5
+grid config $buttonbox1 -row 1 -column 0 -sticky w -ipadx 5 -ipady 5
+grid config $buttonbox2 -row 1 -column 0 -sticky e -ipadx 5 -ipady 5
 
 
 wm resizable . 0 0
@@ -305,6 +312,8 @@ wm title . "tclkitty [info patchlevel]"
 
 proc browseDialog {openOrSaveOrFolder widget extension multifile} {
     global lastBrowseDir
+    global pkgFiles
+    global pkgFilesList
     global extraFiles
     global extraFilesList
     global mainfile
@@ -335,6 +344,11 @@ proc browseDialog {openOrSaveOrFolder widget extension multifile} {
             lappend extraFilesList $c
         }
         set extraFilesList [lsort -unique $extraFilesList]
+    } elseif {$widget == $pkgFiles} {
+        foreach c $chosenFile {
+            lappend pkgFilesList $c
+        }
+        set pkgFilesList [lsort -unique $pkgFilesList]
     } else {
         $widget delete 0 end
         $widget insert 0 $chosenFile

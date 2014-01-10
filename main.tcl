@@ -37,6 +37,7 @@ if [info exists starkit::topdir] {
 
 source $APP_DIR/header.tcl
 source $APP_DIR/gui.tcl
+source $APP_DIR/importexport.tcl
 
 
 proc build {} {
