@@ -12,7 +12,7 @@ variable PATH_ResHacker
 variable PATH_gorc
 
 set KitExtension .kit
-set PATH_sdx "sdx-20110317.kit"
+set PATH_sdx "sdx.kit"
 
 if {$::PLATFORM == $::PLATFORM_WIN} {
     set ExeExtension .exe

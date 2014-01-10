@@ -30,7 +30,7 @@ if [info exists starkit::topdir] {
         set res_dir $REAL_DIR/resources
     }
 } else {
-    set REAL_DIR "[file normalize [pwd]/[file dirname [info script]]/]"
+    set REAL_DIR "[file normalize [pwd]/]"
     set APP_DIR $REAL_DIR
     set res_dir $REAL_DIR/resources
 }
