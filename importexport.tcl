@@ -15,14 +15,14 @@ proc export {} {
     global info_copyright
     
     global createMacApp
-    global info_prodVersion
-    global info_fileVersion
+    global info_name
     global macVersion
     global macVersionrel
     global info_id
-    global info_name
+    global info_region
+    global info_dict
     global macInfoEnabled
-    
+
     
     ## Get Output file ##
     set outputfile [tk_getSaveFile -filetypes {{"tclkitty file" {".tclkitty"}}}]
@@ -57,8 +57,19 @@ proc export {} {
     }
     
     ##### Mac #####
-    if {$::PLATFORM == $::PLATFORM_MAC} {
-        # TODO
+    if {$::PLATFORM == $::PLATFORM_MAC && $createMacApp} {
+        ::ini::set $ini "Mac" "info_name" [$info_name get]
+        for {set i 1} {$i<=3} {incr i} {
+            ::ini::set $ini "Mac" "macVersion_$i" [$macVersion($i) get]
+            ::ini::set $ini "Mac" "macVersionrel_$i" [$macVersionrel($i) get]
+        }
+        ::ini::set $ini "Mac" "info_id" [$info_id get]
+        ::ini::set $ini "Mac" "info_region" [$info_region get]
+        ::ini::set $ini "Mac" "info_dict" [$info_dict get]
+        set vals [array names macInfoEnabled]
+        foreach val $vals {
+            ::ini::set $ini "Mac" "macInfoEnabled_$val" $macInfoEnabled($val)
+        }
     }
     
     ##### Packages #####
@@ -92,12 +103,12 @@ proc import {} {
     global info_copyright
     
     global createMacApp
-    global info_prodVersion
-    global info_fileVersion
+    global info_name
     global macVersion
     global macVersionrel
     global info_id
-    global info_name
+    global info_region
+    global info_dict
     global macInfoEnabled
     
     
@@ -111,39 +122,66 @@ proc import {} {
     set ini [::ini::open $inputfile "r"]
     
     #### Save settings to GUI ####
-    $mainfile insert 0     [::ini::value $ini "Main" "mainfile"]
-    $outputfolder insert 0 [::ini::value $ini "Main" "outputfolder"]
-    if {[info exists iconfile]} {
-        $iconfile insert 0     [::ini::value $ini "Main" "iconfile"]
+    if {[::ini::exists $ini "Main"]} {
+        $mainfile delete 0
+        $mainfile insert 0     [::ini::value $ini "Main" "mainfile"]
+        $outputfolder delete 0
+        $outputfolder insert 0 [::ini::value $ini "Main" "outputfolder"]
+        $iconfile delete 0
+        if {[info exists iconfile]} {
+            $iconfile insert 0     [::ini::value $ini "Main" "iconfile"]
+        }
     }
     
     ##### Windows #####
-    if {$::PLATFORM == $::PLATFORM_WIN} {
+    if {$::PLATFORM == $::PLATFORM_WIN && [::ini::exists $ini "Windows"]} {
         for {set i 1} {$i<=4} {incr i} {
             $info_fileVersion($i) set [::ini::value $ini "Windows" "info_fileVersion$i" 0]
             $info_prodVersion($i) set [::ini::value $ini "Windows" "info_prodVersion$i" 0]
         }
+        $info_fileDesc  delete 0
         $info_fileDesc  insert 0 [::ini::value $ini "Windows" "info_fileDesc"]
+        $info_prodName  delete 0
         $info_prodName  insert 0 [::ini::value $ini "Windows" "info_prodName"]
+        $info_origName  delete 0
         $info_origName  insert 0 [::ini::value $ini "Windows" "info_origName"]
+        $info_company   delete 0
         $info_company   insert 0 [::ini::value $ini "Windows" "info_company"]
+        $info_copyright delete 0
         $info_copyright insert 0 [::ini::value $ini "Windows" "info_copyright"]
     }
     
     ##### Mac #####
-    if {$::PLATFORM == $::PLATFORM_MAC} {
-        # TODO
+    if {$::PLATFORM == $::PLATFORM_MAC && [::ini::exists $ini "Mac"]} {
+        $info_name       delete 0 end
+        $info_name       insert 0 [::ini::value $ini "Mac" "info_name"]
+        for {set i 1} {$i<=3} {incr i} {
+            $macVersion($i) set [::ini::value $ini "Mac" "macVersion_$i"]
+            $macVersionrel($i) set [::ini::value $ini "Mac" "macVersionrel_$i"]
+        }
+        $info_id         delete 0
+        $info_id         insert 0 [::ini::value $ini "Mac" "info_id"]
+        $info_region     delete 0
+        $info_region     insert 0 [::ini::value $ini "Mac" "info_region"]
+        $info_dict       delete 0
+        $info_dict       insert 0 [::ini::value $ini "Mac" "info_dict"]
+        set vals [array names macInfoEnabled]
+        foreach val $vals {
+            set macInfoEnabled($val) [::ini::value $ini "Mac" "macInfoEnabled_$val"]
+        }
     }
     
     ##### Packages #####
     set i 0
+    set pkgFilesList [list]
     while {[::ini::exists $ini "Packages" "pkgFiles$i"]} {
         lappend pkgFilesList [::ini::value $ini "Packages" "pkgFiles$i"]
         incr i
     }
     
-    set i 0
     ##### Files #####
+    set i 0
+    set extraFilesList [list]
     while {[::ini::exists $ini "Files" "extraFiles$i"]} {
         lappend extraFilesList [::ini::value $ini "Files" "extraFiles$i"]
         incr i

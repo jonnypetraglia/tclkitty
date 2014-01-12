@@ -251,7 +251,7 @@ $tabwidget add $tabPkg -text "Packages"
 set pkgFiles_l [ttk::label $tabPkg.pkgFiles_l -text "Packages"]
 set pkgFiles   [listbox $tabPkg.pkgFiles -width 90 -selectmode multiple -listvariable pkgFilesList]
 set pkgFiles_folder [ttk::button $tabPkg.pkgFiles_adF -text "+Folder" -command "browseDialog FOLDER $pkgFiles {} 1"]
-set pkgFiles_remove [ttk::button $tabPkg.pkgFiles_adX -text "-Remove" -command removeExtra]
+set pkgFiles_remove [ttk::button $tabPkg.pkgFiles_adX -text "-Remove" -command removePkg]
 set pkgFiles_note [ttk::label $tabPkg.extraFiles_note -text "ALL packages you need! These will be stored inside 'lib' on the vfs."]
 
 grid config $pkgFiles_l				-row 0 -column 0 -sticky w
@@ -368,5 +368,14 @@ proc removeExtra {} {
     set I [lreverse [$extraFiles curselection]]
     foreach i $I {
         set extraFilesList [lreplace $extraFilesList $i $i]
+    }
+}
+
+proc removePkg {} {
+    global pkgFiles
+    global pkgFilesList
+    set I [lreverse [$pkgFiles curselection]]
+    foreach i $I {
+        set pkgFilesList [lreplace $pkgFilesList $i $i]
     }
 }
