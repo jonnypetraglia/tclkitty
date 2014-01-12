@@ -234,22 +234,19 @@ proc build {} {
         showStatus "Moving output executable to final place"
         hideStatus "  \[$outputexe  ->  $Voutputfolder\]"
         file rename -force -- $outputexe $Voutputfolder/.
-        cleanup "Info" "Successfully generated:\n  [string map {"/" "\\"} $Voutputfolder]\\$outputexe"
     }
     
     if {$::PLATFORM == $::PLATFORM_MAC && $createMacApp} {
         showStatus "~~~Performing platform specific tasks~~~"
-        if {$createMacApp} {
-            showStatus "Removing existing app if any:  $Voutputfolder/[$info_name get].app"
-            file delete -force -- $Voutputfolder/[$info_name get].app
-            macCreateApp $Viconfile $filenameMinusExtension $Voutputfolder
-            cleanup "Info" "Successfully generated:\n  $Voutputfolder/[$info_name get].app"
-        } else {
-            showStatus "Moving output executable to final place"
-            hideStatus "  \[$outputexe  ->  $Voutputfolder\]"
-            file rename -force -- $outputexe $Voutputfolder/.
-            cleanup "Info" "Successfully generated:\n  $Voutputfolder/[getFilename $outputexe]"
-        }
+        showStatus "Removing existing app if any:  $Voutputfolder/[$info_name get].app"
+        file delete -force -- $Voutputfolder/[$info_name get].app
+        macCreateApp $Viconfile $filenameMinusExtension $Voutputfolder
+        cleanup "Info" "Successfully generated:\n  $Voutputfolder/[$info_name get].app"
+    } else {
+        showStatus "Moving output executable to final place"
+        hideStatus "  \[$outputexe  ->  $Voutputfolder\]"
+        file rename -force -- $outputexe $Voutputfolder/.
+        cleanup "Info" "Successfully generated:\n  $Voutputfolder/$outputexe"
     }
 }
 

@@ -323,7 +323,7 @@ proc browseDialog {openOrSaveOrFolder widget extension multifile} {
     if {$extension == "*"} {
         set types [list]
     } else {
-        set types_ [list {Files} $extension]
+        set types_ [list {Files} .$extension]
         set types [list $types_]
     }
     
