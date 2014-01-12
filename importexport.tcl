@@ -127,8 +127,8 @@ proc import {} {
         $mainfile insert 0     [::ini::value $ini "Main" "mainfile"]
         $outputfolder delete 0
         $outputfolder insert 0 [::ini::value $ini "Main" "outputfolder"]
-        $iconfile delete 0
         if {[info exists iconfile]} {
+            $iconfile delete 0
             $iconfile insert 0     [::ini::value $ini "Main" "iconfile"]
         }
     }
