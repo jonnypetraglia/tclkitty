@@ -157,79 +157,94 @@ proc build {} {
             return
         }
     }
-
-    showStatus
-    update idletasks
+    
+    #### Destroy window ####
+    if [winfo exists .statusDialog] {
+        wm withdraw .statusDialog
+        destroy .statusDialog
+    }
 
     #### Clean ####
-    set statusVariable "Cleaning up any leftovers from last time..."
+    showStatus "Cleaning up any leftovers from last time..."
     file delete -force -- $vfsfolder
     file delete -force -- $kitfile
     file delete -force -- $outputexe
     file delete -force -- $tempfolder
     
     ################### Create .kit ###################
-    set statusVariable "Creating starkit file:        $kitfile"
+    showStatus "Creating starkit file:   $kitfile"
+    hideStatus "  \[$res_dir/$PATH_tclcompiler $res_dir/$PATH_sdx qwrap $Vmainfile\]"
     exec "$res_dir/$PATH_tclcompiler" "$res_dir/$PATH_sdx" qwrap "$Vmainfile"
     if {![file exists $kitfile]} {
-        cleanup "Error" "kitfile"
+        cleanup "Error" "Unable to create kitfile"
         return
     }
     lappend cleanupList $kitfile
     
     ################### Unwrap .kit ###################
-    set statusVariable "Unwrapping starkit file:    $vfsfolder"
+    showStatus "Unwrapping starkit file:    $vfsfolder"
+    hideStatus "  \[$res_dir/$PATH_tclcompiler $res_dir/$PATH_sdx unwrap $kitfile\]"
     exec "$res_dir/$PATH_tclcompiler" "$res_dir/$PATH_sdx" unwrap "$kitfile"
     if {![file exists $vfsfolder]} {
-        cleanup "Error" "vfs folder"
+        cleanup "Error" "Unable to create the VFS folder"
         return
     }
     lappend cleanupList $vfsfolder
 
     ################### Copy extra files ###################
     foreach f $extraFilesList {
-        set statusVariable "Copying file:    $f"
         set newfile "$vfsfolder/[getFilename $f]"
+        showStatus "Copying file:            $f"
+        hideStatus "  \[$f  ->  $newfile\]"
         file copy $f $newfile
         if {![file exists $newfile]} {
-            cleanup "Error" "xtra files:   $f"
+            cleanup "Error" "Unable to copy extra file:   $f"
             return
         }
     }
     
     ################### Copy packages ###################
     foreach f $pkgFilesList {
-        set statusVariable "Copying package:    $f"
         set newfile "$vfsfolder/lib/[getFilename $f]"
+        showStatus "Copying package:         $f"
+        hideStatus "  \[$f  ->  $newfile\]"
         file copy $f $newfile
         if {![file exists $newfile]} {
-            cleanup "Error" "xtra files:   $f"
+            cleanup "Error" "Unable to copy pkg file:   $f"
             return
         }
     }
 
     ################### Re-wrap ###################
-    set statusVariable "Final re-wrapping:        $outputexe"
+    showStatus "Final re-wrapping:       $outputexe"
+    hideStatus "  \[$res_dir/$PATH_tclcompiler $res_dir/$PATH_sdx wrap $outputexe -runtime $res_dir/$PATH_tclkit\]"
     exec "$res_dir/$PATH_tclcompiler" "$res_dir/$PATH_sdx" wrap "$outputexe" "-runtime" "$res_dir/$PATH_tclkit"
     if {![file exists $outputexe]} {
-        cleanup "Error" "final exe"
+        cleanup "Error" "Unable to re-wrap final EXE"
         return
     }
     
     if {$::PLATFORM == $::PLATFORM_WIN} {
+        showStatus "~~~Performing platform specific tasks~~~"
         windowsIconAndInfo $Viconfile $filenameMinusExtension
+        showStatus "Moving output executable to final place"
+        hideStatus "  \[$outputexe  ->  $Voutputfolder\]"
         file rename -force -- $outputexe $Voutputfolder/.
-        cleanup "Info" "Successfully generated:\n$Voutputfolder/[getFilename $outputexe]"
+        cleanup "Info" "Successfully generated:\n  [string map {"/" "\\"} $Voutputfolder]\\$outputexe"
     }
     
     if {$::PLATFORM == $::PLATFORM_MAC && $createMacApp} {
+        showStatus "~~~Performing platform specific tasks~~~"
         if {$createMacApp} {
+            showStatus "Removing existing app if any:  $Voutputfolder/[$info_name get].app"
             file delete -force -- $Voutputfolder/[$info_name get].app
             macCreateApp $Viconfile $filenameMinusExtension $Voutputfolder
-            cleanup "Info" "Successfully generated:\n$Voutputfolder/[$info_name get].app"
+            cleanup "Info" "Successfully generated:\n  $Voutputfolder/[$info_name get].app"
         } else {
+            showStatus "Moving output executable to final place"
+            hideStatus "  \[$outputexe  ->  $Voutputfolder\]"
             file rename -force -- $outputexe $Voutputfolder/.
-            cleanup "Info" "Successfully generated:\n$Voutputfolder/[getFilename $outputexe]"
+            cleanup "Info" "Successfully generated:\n  $Voutputfolder/[getFilename $outputexe]"
         }
     }
 }
@@ -237,14 +252,14 @@ proc build {} {
 proc cleanup {reasonType reasonMsg} {
     global cleanupList
     global doCleanup
-    set statusVariable "Cleaning up..."
-    puts "DERP $doCleanup"
+    showStatus "Cleaning up..."
     if {$doCleanup} {
         foreach f $cleanupList {
+            showStatus "  Deleting  $f"
             file delete -force -- $f
         }
     }
-    wm withdraw .statusDialog 
+    showStatus "$reasonMsg"
     tk_messageBox -icon [string tolower $reasonType] -message $reasonMsg -title $reasonType
 }
 
@@ -279,21 +294,27 @@ proc macCreateApp {iconfile filenameMinusExtension outputfolder} {
         set LSMinimumSystemVersion "10.4.0"
     
     # 1. Make directory structure
-    set statusVariable "Creating Mac directory structure"
+    showStatus "Creating Mac directory structure"
+    hideStatus "  \[mkdir $outputfolder/$CFBundleName.app\]"
+    hideStatus "  \[mkdir $outputfolder/$CFBundleName.app/Contents]"
+    hideStatus "  \[mkdir $outputfolder/$CFBundleName.app/Contents/MacOs]"
+    hideStatus "  \[mkdir $outputfolder/$CFBundleName.app/Contents/Resources]"
     file mkdir $outputfolder/$CFBundleName.app
     file mkdir $outputfolder/$CFBundleName.app/Contents
     file mkdir $outputfolder/$CFBundleName.app/Contents/MacOs
     file mkdir $outputfolder/$CFBundleName.app/Contents/Resources
     # 2. Copy $iconfile
     if {[string length $iconfile] > 0} {
-        set statusVariable "Copying Mac icon file"
+        showStatus "Copying Mac icon file"
+        showStatus "  $iconfile  ->  $outputfolder/$CFBundleName.app/Contents/Resources/$CFBundleIconFile"
         file copy -force -- $iconfile $outputfolder/$CFBundleName.app/Contents/Resources/$CFBundleIconFile
     }
     # 3. Move
-    set statusVariable "Copying application to Mac package"
+    showStatus "Copying application to Mac package"
+    showStatus "  $filenameMinusExtension$ExeExtension  ->  $outputfolder/$CFBundleName.app/Contents/MacOs/$CFBundleExecutable"
     file rename -force -- $filenameMinusExtension$ExeExtension $outputfolder/$CFBundleName.app/Contents/MacOs/$CFBundleExecutable
     # 4. Create plist
-    set statusVariable "Creating the plist file"
+    showStatus "Creating the plist file:  $outputfolder/$CFBundleName.app/Contents/Info.plist"
     set fileId [open "$outputfolder/$CFBundleName.app/Contents/Info.plist" "w"]
     
     puts $fileId        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
@@ -341,6 +362,7 @@ proc macCreateApp {iconfile filenameMinusExtension outputfolder} {
     puts $fileId        "</dict>"
     puts $fileId        "</plist>"
     close $fileId
+    showStatus "  Closing plist file"
 }
 
 proc windowsIconAndInfo {iconFile filenameMinusExtension} {
@@ -361,21 +383,28 @@ proc windowsIconAndInfo {iconFile filenameMinusExtension} {
     global res_dir
     
     # Uncompress with UPX
-    set statusVariable "Uncompressing with UPX"
+    showStatus "Uncompressing with UPX"
+    hideStatus "  \[$res_dir/$PATH_upx -d $filenameMinusExtension$ExeExtension\]"
     exec $res_dir/$PATH_upx "-d" $filenameMinusExtension$ExeExtension
     
     # ResHacker to remove version & icons
-    set statusVariable "Removing information & icons with ResHacker"
+    showStatus "Removing information & icons with ResHacker"
+    hideStatus "  \[$res_dir/$PATH_ResHacker -delete $filenameMinusExtension$ExeExtension , $filenameMinusExtension$ExeExtension , versioninfo , ,\]"
+    hideStatus "  \[$res_dir/$PATH_ResHacker -delete $filenameMinusExtension$ExeExtension , $filenameMinusExtension$ExeExtension , icongroup , ,\]"
     exec $res_dir/$PATH_ResHacker "-delete" "$filenameMinusExtension$ExeExtension" "," "$filenameMinusExtension$ExeExtension" "," "versioninfo" "," ","
     exec $res_dir/$PATH_ResHacker "-delete" "$filenameMinusExtension$ExeExtension" "," "$filenameMinusExtension$ExeExtension" "," "icongroup" "," ","
     
-    set statusVariable "Creating RC file"
+    # Create the RC file
+    showStatus "Creating RC file"
+    showStatus "  Opening file to write: tclkitty.rc"
     set fileId [open "tclkitty.rc" "w"]
     if {[string length $iconFile] > 0} {
         set iconFile [string map {"/" "\\"} $iconFile]
+        showStatus  "  Writing icon info for file: $iconFile"
         puts $fileId "APPICONS ICON \"$iconFile\""
         puts $fileId "TK ICON \"$iconFile\""
     }
+    showStatus "  Writing misc info to RC file"
     puts $fileId         "1 VERSIONINFO"
     puts $fileId         "FILEVERSION [$info_fileVersion(1) get], [$info_fileVersion(2) get], [$info_fileVersion(3) get], [$info_fileVersion(4) get]"
     puts $fileId         "PRODUCTVERSION [$info_fileVersion(1) get], [$info_fileVersion(2) get], [$info_fileVersion(3) get], [$info_fileVersion(4) get]"
@@ -407,19 +436,23 @@ proc windowsIconAndInfo {iconFile filenameMinusExtension} {
     puts $fileId         "        VALUE \"Translation\", 0x0409, 0x04B0"
     puts $fileId         "    }"
     puts $fileId         "}"
+    showStatus "  Closing RC file"
     close $fileId
     
     # Convert RC to RES
-    set statusVariable "Generating RES from RC"
+    showStatus "Generating RES file from RC file"
+    hideStatus "  \[$res_dir/$PATH_gorc /r tclkitty.rc\]"
     exec $res_dir/$PATH_gorc /r "tclkitty.rc"
     lappend cleanupList "tclkitty.rc"
     lappend cleanupList "tclkitty.res"
     
     # Add Res
-    set statusVariable "Adding RES to executable"
+    showStatus "Adding RES to executable"
+    hideStatus "  \[$res_dir/$PATH_ResHacker -add $filenameMinusExtension$ExeExtension , $filenameMinusExtension$ExeExtension , tclkitty.res , ,,\]"
     exec $res_dir/$PATH_ResHacker -add $filenameMinusExtension$ExeExtension , $filenameMinusExtension$ExeExtension , tclkitty.res , ,,
     
-    set statusVariable "Re-compressing with UPX"
+    showStatus "Re-compressing with UPX"
+    hideStatus "  \[exec $res_dir/$PATH_upx $filenameMinusExtension$ExeExtension\]"
     exec $res_dir/$PATH_upx $filenameMinusExtension$ExeExtension
 }
 
@@ -438,13 +471,17 @@ proc about {} {
     
 }
 
-proc showStatus {} {
-    global statusVariable
-    
+proc hideStatus {statusVariable} {
+    puts $statusVariable
+}
+
+proc showStatus {statusVariable} {
     if [winfo exists .statusDialog] {
-        wm withdraw .statusDialog
-        wm deiconify .statusDialog
-        .statusDialog.bar start
+        .statusDialog.text configure -state normal
+        .statusDialog.text insert end $statusVariable\n
+        .statusDialog.text yview end
+        .statusDialog.text configure -state disabled
+        update
         return
     }
     
@@ -452,11 +489,12 @@ proc showStatus {} {
     wm title .statusDialog "Status"
     wm resizable .statusDialog 0 0
     
-    label .statusDialog.text -textvariable statusVariable
-    ttk::progressbar .statusDialog.bar -length 400
+    text .statusDialog.text -width 100 -height 20 -state disabled -background white
     
     pack .statusDialog.text
-    pack .statusDialog.bar
-    .statusDialog.bar start
-    
+    .statusDialog.text configure -state normal
+    .statusDialog.text insert end $statusVariable\n
+    .statusDialog.text yview end
+    .statusDialog.text configure -state disabled
+    update
 }
