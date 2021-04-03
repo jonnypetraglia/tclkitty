@@ -92,7 +92,11 @@ tclkitty is very much a work in progress and please keep in mind that it is esse
 
 -----------
 
-## 5. Resources used ##
+## 5. Dependencies
+
+tclkitty requires [tcllib](https://core.tcl-lang.org/tcllib/doc/trunk/embedded/index.md) to run.
+
+## 6. Resources used ##
 
 tclkitty uses several other programs to perform/assist in the "compilation".
 
@@ -130,7 +134,16 @@ There are some tricky things, and, to be honest, it's been a while since I compi
 Not going to lie, not very sure on this, but here's a running list:
 
   - Mac:
-    - rechan zlib Tcl00 tcl::tommath vfslib vfs::mk4 Tk Mk4tcl vfs Tcl
+    - rechan
+    - zlib
+    - Tcl00
+    - tcl::tommath
+    - vfslib
+    - vfs::mk4
+    - Tk
+    - Mk4tcl
+    - vfs
+    - Tcl
 	
 
 -----------
