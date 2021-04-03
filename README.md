@@ -1,5 +1,5 @@
 # tclkitty #
-# Copyright 2013-2014 Jon Petraglia of Qweex #
+# Copyright 2013-2021 Jonny Petraglia #
 # Released under the BSD 3-clause license #
  
 tclkitty is a GUI to assist in generating Starkits for Tcl/Tk.
